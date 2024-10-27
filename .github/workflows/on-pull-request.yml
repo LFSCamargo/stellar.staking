@@ -1,0 +1,26 @@
+name: Pull Request Checker
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+
+      - name: Set Target to wasm32-unknown-unknown
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Build
+        run: |
+          cargo build --target wasm32-unknown-unknown
+
+      - name: Test
+        run: |
+          cargo test
