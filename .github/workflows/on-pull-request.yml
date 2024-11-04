@@ -21,7 +21,16 @@ jobs:
       - name: Set Target to wasm32-unknown-unknown
         run: rustup target add wasm32-unknown-unknown
 
+      - name: Cache Cargo
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Install Stellar
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           cargo install --locked stellar-cli
 
