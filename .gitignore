@@ -5,3 +5,6 @@ target
 .soroban
 
 contracts/**/test_snapshots/*
+
+
+.DS_Store

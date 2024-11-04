@@ -17,13 +17,17 @@ jobs:
           toolchain: stable
           components: clippy
 
+      - name: Install make
+        run: |
+          sudo apt-get install make
+
       - name: Set Target to wasm32-unknown-unknown
         run: rustup target add wasm32-unknown-unknown
 
-      - name: Build
+      - name: Install Stellar
         run: |
-          cargo build --target wasm32-unknown-unknown
+          cargo install --locked stellar-cli
 
       - name: Test
         run: |
-          cargo test
+          make all
