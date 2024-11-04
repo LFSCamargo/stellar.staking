@@ -12,9 +12,7 @@ fn create_token_contract<'a>(e: &'a Env, admin: &'a Address) -> token::Client<'a
 }
 
 fn install_contract_wasm(e: &Env) -> BytesN<32> {
-  soroban_sdk::contractimport!(
-    file = "../../target/wasm32-unknown-unknown/release/soroban_token_contract.wasm"
-  );
+  soroban_sdk::contractimport!(file = "token/soroban_token_contract.wasm");
 
   e.deployer().upload_contract_wasm(WASM)
 }

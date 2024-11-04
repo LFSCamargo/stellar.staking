@@ -1,8 +1,7 @@
 #![no_std]
 use core::panic;
 use soroban_sdk::{
-  contract, contractimpl, contracttype, symbol_short, token as STToken, Address, BytesN, Env,
-  Symbol,
+  contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, IntoVal, String, Symbol,
 };
 use token::create_contract;
 
@@ -78,12 +77,21 @@ impl LiquidStakingContract {
     }
 
     let token_contract = create_contract(&env, token_wasm_hash, &original_token);
+    let token_name: String = "Staked XLM".into_val(&env);
+    let token_symbol: String = "stXLM".into_val(&env);
 
-    STToken::Client::new(&env, &token_contract);
+    token::Client::new(&env, &token_contract).initialize(
+      &env.current_contract_address(),
+      &7u32,
+      &token_name,
+      &token_symbol,
+    );
 
     state.reward_token = token_contract;
     state.initialized = true;
+
     env.storage().instance().set(&STAKING_STATE, &state);
+
     return state;
   }
 
