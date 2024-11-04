@@ -17,16 +17,14 @@ jobs:
           toolchain: stable
           components: clippy
 
+      - uses: stellar/stellar-cli@4b2738e96f955904a9cf815e0a0bb947bf8201eb
+
       - name: Install make
         run: |
           sudo apt-get install make
 
       - name: Set Target to wasm32-unknown-unknown
         run: rustup target add wasm32-unknown-unknown
-
-      - name: Install Stellar
-        run: |
-          cargo install --locked stellar-cli
 
       - name: Test
         run: |
