@@ -41,6 +41,8 @@ pub struct UserRecord {
   pub staked_amount: u64,
   pub rewards_claimed: u64,
   pub user_reward_per_token_staked: u64,
+  pub created_at: u64,
+  pub updated_at: u64,
 }
 
 // const STAKING_DURATION: u64 = 2592000;

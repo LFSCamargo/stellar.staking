@@ -61,5 +61,5 @@ fn test_contract_initialize() {
   assert_eq!(staking_state.staking_token, token.address);
   assert_eq!(staking_state.reward_token, initialized_state.reward_token);
   assert_eq!(staking_state.owner, owner);
-  assert!(staking_state.initialized)
+  assert!(staking_state.initialized);
 }
