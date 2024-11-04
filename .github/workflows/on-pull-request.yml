@@ -30,9 +30,8 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Install Stellar
-        if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          cargo install --locked stellar-cli
+          sh install_stellar.sh
 
       - name: Test
         run: |
