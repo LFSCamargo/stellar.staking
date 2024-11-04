@@ -17,7 +17,7 @@ jobs:
           toolchain: stable
           components: clippy
 
-      - uses: stellar/stellar-cli@4b2738e96f955904a9cf815e0a0bb947bf8201eb
+      - uses: stellar/stellar-cli@main
 
       - name: Install make
         run: |
