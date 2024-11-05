@@ -5,6 +5,7 @@ on:
 
 jobs:
   build:
+    if: contains(github.event.pull_request.head.repo.files, '*.rs') || contains(github.event.pull_request.head.repo.files, '*.wasm') || contains(github.event.pull_request.head.repo.files, '*.toml') || contains(github.event.pull_request.head.repo.files, '*.yml')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -36,3 +37,7 @@ jobs:
       - name: Test
         run: |
           make all
+
+      - name: Format Check
+        run: |
+          make lint

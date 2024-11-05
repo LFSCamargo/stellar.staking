@@ -15,3 +15,11 @@ clean:
 
 # Alias for the test target, that technically runs all the important scripts
 all: test
+
+# Format using cargo formatting tool
+fmt:
+	cargo fmt --all
+
+# Lint using cargo linter
+lint:
+	cargo fmt --all --check
