@@ -8,36 +8,7 @@ pub struct LiquidStakingContract;
 
 #[contractimpl]
 impl LiquidStakingContract {
-  pub fn set_owner(env: Env, new_owner: Address, current_owner: Address) -> Result<(), Error> {
-    current_owner.require_auth();
-    new_owner.require_auth();
-
-    let mut state = Self::get_staking_state(env.clone()).unwrap_or(storage::StakingContractState {
-      staking_token: env.current_contract_address().clone(),
-      reward_token: env.current_contract_address(),
-      owner: env.current_contract_address(),
-      initialized: false,
-    });
-
-    if state.initialized == false {
-      return Err(Error::NotInitialized);
-    }
-
-    if state.owner != current_owner {
-      return Err(Error::NotOwner);
-    }
-
-    state.owner = new_owner;
-
-    env
-      .storage()
-      .instance()
-      .set(&storage::STAKING_STATE, &state);
-
-    Ok(()) // Return Ok(()) to indicate success
-  }
-
-  pub fn initialize_staking(
+  pub fn initialize(
     env: Env,
     staking_token: Address,
     owner: Address,
@@ -84,17 +55,37 @@ impl LiquidStakingContract {
     return Ok(state);
   }
 
+  pub fn set_owner(env: Env, new_owner: Address, current_owner: Address) -> Result<(), Error> {
+    current_owner.require_auth();
+    new_owner.require_auth();
+
+    let mut state = Self::get_staking_state(env.clone())
+      .unwrap_or(storage::StorageClient::get_default_state(env.clone()));
+
+    if state.initialized == false {
+      return Err(Error::NotInitialized);
+    }
+
+    if state.owner != current_owner {
+      return Err(Error::NotOwner);
+    }
+
+    state.owner = new_owner;
+
+    env
+      .storage()
+      .instance()
+      .set(&storage::STAKING_STATE, &state);
+
+    Ok(()) // Return Ok(()) to indicate success
+  }
+
   pub fn get_staking_state(env: Env) -> Result<storage::StakingContractState, Error> {
     let state = env
       .storage()
       .instance()
       .get(&storage::STAKING_STATE)
-      .unwrap_or(storage::StakingContractState {
-        staking_token: env.current_contract_address().clone(),
-        reward_token: env.current_contract_address(),
-        owner: env.current_contract_address(),
-        initialized: false,
-      });
+      .unwrap_or(storage::StorageClient::get_default_state(env.clone()));
 
     if state.initialized == false {
       return Err(Error::NotInitialized);

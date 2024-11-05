@@ -1,5 +1,7 @@
 #![allow(unused)]
-use soroban_sdk::{contracttype, symbol_short, Address, Symbol};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol};
+
+use crate::errors;
 
 #[contracttype]
 #[derive(Clone)]
@@ -11,19 +13,6 @@ pub struct StakingContractState {
 }
 
 pub const STAKING_STATE: Symbol = symbol_short!("state");
-
-#[contracttype]
-#[derive(Clone)]
-pub struct StakingPoolInfo {
-  pub duration: u64,
-  pub finish_at: u64,
-  pub updated_at: u64,
-  pub reward_rate: u64,
-  pub reward_per_token_stored: u64,
-  pub total_supply: u64,
-}
-
-pub const STAKING_POOL_INFO: Symbol = symbol_short!("poolinfo");
 
 #[contracttype]
 pub enum UserInfoRegistry {
@@ -39,4 +28,27 @@ pub struct UserRecord {
 
   pub created_at: u64,
   pub updated_at: u64,
+}
+
+pub struct StorageClient;
+
+impl StorageClient {
+  pub fn get_default_state(env: Env) -> StakingContractState {
+    StakingContractState {
+      staking_token: env.current_contract_address().clone(),
+      reward_token: env.current_contract_address().clone(),
+      owner: env.current_contract_address().clone(),
+      initialized: false,
+    }
+  }
+
+  pub fn get_default_user(env: Env, user: Address) -> UserRecord {
+    UserRecord {
+      staked_amount: 0,
+      created_at: 0,
+      reward_amount: 0,
+      updated_at: 0,
+      address: user.clone(),
+    }
+  }
 }

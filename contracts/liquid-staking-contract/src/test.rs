@@ -35,28 +35,66 @@ fn test_contract_initialize() {
   let owner = Address::generate(&env);
   let token = create_token_contract(&env, &owner);
   let liquid_staking_contract_client = create_liquid_staking_contract(&env);
-  let initialized_state = liquid_staking_contract_client.initialize_staking(
+  let initialized_state = liquid_staking_contract_client.initialize(
     &token.address.clone(),
     &owner,
     &install_contract_wasm(&env),
   );
 
-  // If the state is initialized it should be true and the initialize function should panic when called again
   assert!(initialized_state.initialized);
-  // Initialized state has the owner
   assert_eq!(initialized_state.owner, owner);
-  // The staking token is the token that we initialized above
   assert_eq!(initialized_state.staking_token, token.address);
-  // The reward token the contract initializes and the contract is the owner
   assert_ne!(initialized_state.reward_token, token.address);
+}
 
-  let staking_state = liquid_staking_contract_client.get_staking_state();
+#[test]
+fn test_get_staking_state() {
+  let env = Env::default();
+  env.mock_all_auths();
 
-  // Asserts that the get_staking_state function returns the initialized state
-  assert_eq!(staking_state.staking_token, token.address);
-  assert_eq!(staking_state.reward_token, initialized_state.reward_token);
-  assert_eq!(staking_state.owner, owner);
-  assert!(staking_state.initialized);
+  let owner = Address::generate(&env);
+  let token = create_token_contract(&env, &owner);
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+
+  liquid_staking_contract_client.initialize(
+    &token.address.clone(),
+    &owner,
+    &install_contract_wasm(&env),
+  );
+
+  let state = liquid_staking_contract_client.get_staking_state();
+
+  assert!(state.initialized);
+  assert_eq!(state.owner, owner);
+  assert_eq!(state.staking_token, token.address);
+  assert_ne!(state.reward_token, token.address);
+}
+
+#[test]
+#[should_panic(expected = "HostError: Error(Contract, #2)")]
+fn test_get_staking_state_not_initialized() {
+  let env = Env::default();
+  env.mock_all_auths();
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+
+  liquid_staking_contract_client.get_staking_state();
+}
+
+#[test]
+#[should_panic(expected = "HostError: Error(Contract, #1)")]
+fn test_contract_initialize_twice() {
+  let env = Env::default();
+  env.mock_all_auths();
+
+  let owner = Address::generate(&env);
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+
+  liquid_staking_contract_client.initialize(&owner, &owner, &install_contract_wasm(&env));
+
+  liquid_staking_contract_client.initialize(&owner, &owner, &install_contract_wasm(&env));
 }
 
 #[test]
@@ -70,7 +108,7 @@ fn test_set_owner() {
 
   let token = create_token_contract(&env, &owner);
 
-  liquid_staking_contract_client.initialize_staking(
+  liquid_staking_contract_client.initialize(
     &token.address.clone(),
     &owner,
     &install_contract_wasm(&env),
@@ -94,7 +132,7 @@ fn test_set_owner_not_owner() {
 
   let token = create_token_contract(&env, &owner);
 
-  liquid_staking_contract_client.initialize_staking(
+  liquid_staking_contract_client.initialize(
     &token.address.clone(),
     &owner,
     &install_contract_wasm(&env),
@@ -119,30 +157,4 @@ fn test_set_owner_not_initialized() {
   let liquid_staking_contract_client = create_liquid_staking_contract(&env);
 
   liquid_staking_contract_client.set_owner(&new_owner, &owner);
-}
-
-#[test]
-#[should_panic(expected = "HostError: Error(Contract, #1)")]
-fn test_contract_initialize_twice() {
-  let env = Env::default();
-  env.mock_all_auths();
-
-  let owner = Address::generate(&env);
-
-  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
-
-  liquid_staking_contract_client.initialize_staking(&owner, &owner, &install_contract_wasm(&env));
-
-  liquid_staking_contract_client.initialize_staking(&owner, &owner, &install_contract_wasm(&env));
-}
-
-#[test]
-#[should_panic(expected = "HostError: Error(Contract, #2)")]
-fn test_get_staking_state_not_initialized() {
-  let env = Env::default();
-  env.mock_all_auths();
-
-  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
-
-  liquid_staking_contract_client.get_staking_state();
 }
