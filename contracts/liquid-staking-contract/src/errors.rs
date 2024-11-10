@@ -7,8 +7,8 @@ pub enum Error {
   AlreadyInitialized = 1,
   NotInitialized = 2,
   NotOwner = 3,
-
   WithdrawalBeforeLockup = 4,
-
   InvalidAmount = 5,
+  NotEnoughFunds = 6,
+  ThereIsNoRewardToClaim = 7,
 }
