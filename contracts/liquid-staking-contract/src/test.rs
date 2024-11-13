@@ -28,6 +28,7 @@ fn create_liquid_staking_contract<'a>(e: &Env) -> contract::LiquidStakingContrac
   return staking_pool;
 }
 
+// INITIALIZE
 #[test]
 fn test_contract_initialize() {
   let env = Env::default();
@@ -54,19 +55,31 @@ fn test_contract_initialize() {
 }
 
 #[test]
-fn test_staker_add_funds() {
+#[should_panic(expected = "HostError: Error(Contract, #1)")]
+fn test_contract_initialize_twice() {
   let env = Env::default();
-
   env.mock_all_auths();
 
   let owner = Address::generate(&env);
 
-  let staker = Address::generate(&env);
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+
+  liquid_staking_contract_client.initialize(&owner, &owner, &owner, &install_contract_wasm(&env));
+  liquid_staking_contract_client.initialize(&owner, &owner, &owner, &install_contract_wasm(&env));
+}
+
+// OWNER SET OWNER
+#[test]
+fn test_set_owner() {
+  let env = Env::default();
+  env.mock_all_auths();
+
+  let owner = Address::generate(&env);
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
 
   let base_token = create_token_contract(&env, &owner);
   let reward_token = create_token_contract(&env, &owner);
-
-  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
 
   liquid_staking_contract_client.initialize(
     &base_token.address.clone(),
@@ -75,41 +88,24 @@ fn test_staker_add_funds() {
     &install_contract_wasm(&env),
   );
 
-  reward_token.mint(&owner, &1000);
+  let new_owner = Address::generate(&env);
 
-  liquid_staking_contract_client.add_reward_funds(&owner, &1000);
-
-  let global_state = liquid_staking_contract_client.get_global_state();
-
-  base_token.mint(&staker, &1000);
-
-  let amount = 1000 as i128;
-
-  liquid_staking_contract_client.stake(&staker, &amount);
-
-  let user_position = liquid_staking_contract_client.get_user_position(&staker);
-
-  log!(&env, "USER BALANCE", user_position.balance);
-  log!(&env, "GLOBAL TOTAL SUPPLY", global_state.token_supply);
-
-  assert!(user_position.balance > 0);
-  assert_eq!(user_position.balance, amount);
+  liquid_staking_contract_client.set_owner(&new_owner, &owner);
 }
 
 #[test]
-fn test_unstake_funds() {
+#[should_panic(expected = "HostError: Error(Contract, #3)")]
+fn test_set_owner_not_owner() {
   let env = Env::default();
-
-  env.mock_all_auths();
 
   let owner = Address::generate(&env);
 
-  let staker = Address::generate(&env);
+  env.mock_all_auths();
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
 
   let base_token = create_token_contract(&env, &owner);
   let reward_token = create_token_contract(&env, &owner);
-
-  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
 
   liquid_staking_contract_client.initialize(
     &base_token.address.clone(),
@@ -118,27 +114,28 @@ fn test_unstake_funds() {
     &install_contract_wasm(&env),
   );
 
-  reward_token.mint(&owner, &1000);
+  let new_owner = Address::generate(&env);
+  let non_owner = Address::generate(&env);
 
-  liquid_staking_contract_client.add_reward_funds(&owner, &1000);
-
-  base_token.mint(&staker, &1000);
-
-  let amount = 1000 as i128;
-
-  liquid_staking_contract_client.stake(&staker, &amount);
-
-  let user_pos1 = liquid_staking_contract_client.get_user_position(&staker);
-
-  liquid_staking_contract_client.unstake(&staker, &amount);
-
-  let user_pos2 = liquid_staking_contract_client.get_user_position(&staker);
-
-  assert!(user_pos1.balance > 0);
-  assert_eq!(user_pos1.balance, amount);
-  assert!(user_pos2.balance == 0);
+  liquid_staking_contract_client.set_owner(&new_owner, &non_owner);
 }
 
+#[test]
+#[should_panic(expected = "HostError: Error(Contract, #2)")]
+fn test_set_owner_not_initialized() {
+  let env = Env::default();
+  let owner = Address::generate(&env);
+
+  let new_owner = Address::generate(&env);
+
+  env.mock_all_auths();
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+
+  liquid_staking_contract_client.set_owner(&new_owner, &owner);
+}
+
+// OWNER ADD FUNDS
 #[test]
 fn test_contract_owner_add_funds() {
   let env = Env::default();
@@ -224,6 +221,95 @@ fn test_contract_owner_add_funds_contract_not_initialized() {
   liquid_staking_contract_client.add_reward_funds(&owner, &1000);
 }
 
+// STAKE FLOW
+#[test]
+fn test_staker_add_funds() {
+  let env = Env::default();
+
+  env.mock_all_auths();
+
+  let owner = Address::generate(&env);
+
+  let staker = Address::generate(&env);
+
+  let base_token = create_token_contract(&env, &owner);
+  let reward_token = create_token_contract(&env, &owner);
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+
+  liquid_staking_contract_client.initialize(
+    &base_token.address.clone(),
+    &reward_token.address.clone(),
+    &owner,
+    &install_contract_wasm(&env),
+  );
+
+  reward_token.mint(&owner, &1000);
+
+  liquid_staking_contract_client.add_reward_funds(&owner, &1000);
+
+  let global_state = liquid_staking_contract_client.get_global_state();
+
+  base_token.mint(&staker, &1000);
+
+  let amount = 1000 as i128;
+
+  liquid_staking_contract_client.stake(&staker, &amount);
+
+  let user_position = liquid_staking_contract_client.get_user_position(&staker);
+
+  log!(&env, "USER BALANCE", user_position.balance);
+  log!(&env, "GLOBAL TOTAL SUPPLY", global_state.token_supply);
+
+  assert!(user_position.balance > 0);
+  assert_eq!(user_position.balance, amount);
+}
+
+// UNSTAKE FLOW
+#[test]
+fn test_unstake_funds() {
+  let env = Env::default();
+
+  env.mock_all_auths();
+
+  let owner = Address::generate(&env);
+
+  let staker = Address::generate(&env);
+
+  let base_token = create_token_contract(&env, &owner);
+  let reward_token = create_token_contract(&env, &owner);
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+
+  liquid_staking_contract_client.initialize(
+    &base_token.address.clone(),
+    &reward_token.address.clone(),
+    &owner,
+    &install_contract_wasm(&env),
+  );
+
+  reward_token.mint(&owner, &1000);
+
+  liquid_staking_contract_client.add_reward_funds(&owner, &1000);
+
+  base_token.mint(&staker, &1000);
+
+  let amount = 1000 as i128;
+
+  liquid_staking_contract_client.stake(&staker, &amount);
+
+  let user_pos1 = liquid_staking_contract_client.get_user_position(&staker);
+
+  liquid_staking_contract_client.unstake(&staker, &amount);
+
+  let user_pos2 = liquid_staking_contract_client.get_user_position(&staker);
+
+  assert!(user_pos1.balance > 0);
+  assert_eq!(user_pos1.balance, amount);
+  assert!(user_pos2.balance == 0);
+}
+
+// GET STAKING STATE
 #[test]
 fn test_get_staking_state() {
   let env = Env::default();
@@ -260,84 +346,4 @@ fn test_get_staking_state_not_initialized() {
   let liquid_staking_contract_client = create_liquid_staking_contract(&env);
 
   liquid_staking_contract_client.get_staking_state();
-}
-
-#[test]
-#[should_panic(expected = "HostError: Error(Contract, #1)")]
-fn test_contract_initialize_twice() {
-  let env = Env::default();
-  env.mock_all_auths();
-
-  let owner = Address::generate(&env);
-
-  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
-
-  liquid_staking_contract_client.initialize(&owner, &owner, &owner, &install_contract_wasm(&env));
-  liquid_staking_contract_client.initialize(&owner, &owner, &owner, &install_contract_wasm(&env));
-}
-
-#[test]
-fn test_set_owner() {
-  let env = Env::default();
-  env.mock_all_auths();
-
-  let owner = Address::generate(&env);
-
-  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
-
-  let base_token = create_token_contract(&env, &owner);
-  let reward_token = create_token_contract(&env, &owner);
-
-  liquid_staking_contract_client.initialize(
-    &base_token.address.clone(),
-    &reward_token.address.clone(),
-    &owner,
-    &install_contract_wasm(&env),
-  );
-
-  let new_owner = Address::generate(&env);
-
-  liquid_staking_contract_client.set_owner(&new_owner, &owner);
-}
-
-#[test]
-#[should_panic(expected = "HostError: Error(Contract, #3)")]
-fn test_set_owner_not_owner() {
-  let env = Env::default();
-
-  let owner = Address::generate(&env);
-
-  env.mock_all_auths();
-
-  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
-
-  let base_token = create_token_contract(&env, &owner);
-  let reward_token = create_token_contract(&env, &owner);
-
-  liquid_staking_contract_client.initialize(
-    &base_token.address.clone(),
-    &reward_token.address.clone(),
-    &owner,
-    &install_contract_wasm(&env),
-  );
-
-  let new_owner = Address::generate(&env);
-  let non_owner = Address::generate(&env);
-
-  liquid_staking_contract_client.set_owner(&new_owner, &non_owner);
-}
-
-#[test]
-#[should_panic(expected = "HostError: Error(Contract, #2)")]
-fn test_set_owner_not_initialized() {
-  let env = Env::default();
-  let owner = Address::generate(&env);
-
-  let new_owner = Address::generate(&env);
-
-  env.mock_all_auths();
-
-  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
-
-  liquid_staking_contract_client.set_owner(&new_owner, &owner);
 }
