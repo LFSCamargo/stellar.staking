@@ -154,13 +154,12 @@ impl LiquidStakingContract {
       return global_state.reward_per_token_stored;
     } else {
       let current_timestamp = e.ledger().timestamp() as i128;
+      let last_timestamp = global_state.last_updated_time as i128;
 
       let decimals = 1e7 as i128;
 
       return global_state.reward_per_token_stored
-        + (((current_timestamp - global_state.last_updated_time)
-          * constants::REWARD_RATE
-          * decimals)
+        + (((current_timestamp - last_timestamp) * constants::REWARD_RATE * decimals)
           / global_state.token_supply);
     }
   }
@@ -175,7 +174,7 @@ impl LiquidStakingContract {
       ));
 
     global_state.reward_per_token_stored = Self::reward_per_token(env.clone());
-    global_state.last_updated_time = env.ledger().timestamp() as i128;
+    global_state.last_updated_time = env.ledger().timestamp();
 
     let key = UserInfoRegistry::UserRecord(user.clone());
     let mut user_info =
@@ -201,6 +200,8 @@ impl LiquidStakingContract {
 
   pub fn unstake(env: Env, user: Address, amount: i128) -> Result<(), Error> {
     user.require_auth();
+
+    Self::update_reward(env.clone(), user.clone());
 
     if amount < 0 {
       return Err(Error::InvalidAmount);
@@ -270,6 +271,8 @@ impl LiquidStakingContract {
   pub fn stake(env: Env, user: Address, amount: i128) -> Result<(), Error> {
     user.require_auth();
 
+    Self::update_reward(env.clone(), user.clone());
+
     if amount < 0 {
       return Err(Error::InvalidAmount);
     }
@@ -312,7 +315,6 @@ impl LiquidStakingContract {
 
     env.storage().instance().set(&key, &user_record);
 
-    Self::update_reward(env.clone(), user.clone());
     base_token_client.transfer(&user, &env.current_contract_address(), &amount);
     share_token_client.mint(&user, &amount);
 
@@ -321,6 +323,8 @@ impl LiquidStakingContract {
 
   pub fn claim_rewards(env: Env, user: Address) -> Result<(), Error> {
     user.require_auth();
+
+    Self::update_reward(env.clone(), user.clone()); // update rewards before claim
 
     let state = Self::get_staking_state(env.clone())
       .unwrap_or(storage::StorageClient::get_default_state(env.clone()));

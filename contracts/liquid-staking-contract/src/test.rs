@@ -1,8 +1,10 @@
 #![cfg(test)]
 extern crate std;
 
+use core::ops::Add;
+
 use super::*;
-use soroban_sdk::testutils::Address as _;
+use soroban_sdk::testutils::{Address as _, Ledger};
 use soroban_sdk::{log, Address, BytesN, Env};
 
 use crate::token;
@@ -66,6 +68,45 @@ fn test_contract_initialize_twice() {
 
   liquid_staking_contract_client.initialize(&owner, &owner, &owner, &install_contract_wasm(&env));
   liquid_staking_contract_client.initialize(&owner, &owner, &owner, &install_contract_wasm(&env));
+}
+
+// GET STAKING STATE
+#[test]
+fn test_get_staking_state() {
+  let env = Env::default();
+  env.mock_all_auths();
+
+  let owner = Address::generate(&env);
+  let base_token = create_token_contract(&env, &owner);
+  let reward_token = create_token_contract(&env, &owner);
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+
+  liquid_staking_contract_client.initialize(
+    &base_token.address.clone(),
+    &reward_token.address.clone(),
+    &owner,
+    &install_contract_wasm(&env),
+  );
+
+  let state = liquid_staking_contract_client.get_staking_state();
+
+  assert!(state.initialized);
+  assert_eq!(state.owner, owner);
+  assert_eq!(state.base_token, base_token.address);
+  assert_eq!(state.reward_token, reward_token.address);
+  assert_ne!(state.share_token, base_token.address);
+}
+
+#[test]
+#[should_panic(expected = "HostError: Error(Contract, #2)")]
+fn test_get_staking_state_not_initialized() {
+  let env = Env::default();
+  env.mock_all_auths();
+
+  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+
+  liquid_staking_contract_client.get_staking_state();
 }
 
 // OWNER SET OWNER
@@ -309,13 +350,17 @@ fn test_unstake_funds() {
   assert!(user_pos2.balance == 0);
 }
 
-// GET STAKING STATE
+// REWARDS FLOW
 #[test]
-fn test_get_staking_state() {
+pub fn test_claim_rewards() {
   let env = Env::default();
+
   env.mock_all_auths();
 
   let owner = Address::generate(&env);
+
+  let staker = Address::generate(&env);
+
   let base_token = create_token_contract(&env, &owner);
   let reward_token = create_token_contract(&env, &owner);
 
@@ -328,22 +373,29 @@ fn test_get_staking_state() {
     &install_contract_wasm(&env),
   );
 
-  let state = liquid_staking_contract_client.get_staking_state();
+  reward_token.mint(&owner, &100000000000);
 
-  assert!(state.initialized);
-  assert_eq!(state.owner, owner);
-  assert_eq!(state.base_token, base_token.address);
-  assert_eq!(state.reward_token, reward_token.address);
-  assert_ne!(state.share_token, base_token.address);
-}
+  liquid_staking_contract_client.add_reward_funds(&owner, &100000000000);
 
-#[test]
-#[should_panic(expected = "HostError: Error(Contract, #2)")]
-fn test_get_staking_state_not_initialized() {
-  let env = Env::default();
-  env.mock_all_auths();
+  base_token.mint(&staker, &1000);
 
-  let liquid_staking_contract_client = create_liquid_staking_contract(&env);
+  let amount = 1000 as i128;
 
-  liquid_staking_contract_client.get_staking_state();
+  liquid_staking_contract_client.stake(&staker, &amount);
+
+  let seconds_in_day = 86400 as u64;
+
+  env.ledger().with_mut(|li| {
+    li.timestamp = 12345;
+  });
+
+  let _ = env.ledger().timestamp().add(seconds_in_day * 4);
+
+  let _ = env.ledger().sequence().add(4);
+
+  liquid_staking_contract_client.claim_rewards(&staker);
+
+  let user_rewards_balance = reward_token.balance(&staker);
+
+  assert!(user_rewards_balance > 0);
 }

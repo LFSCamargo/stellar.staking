@@ -6,7 +6,7 @@ use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol};
 pub struct StakingGlobals {
   pub token_supply: i128,            // token supply
   pub reward_per_token_stored: i128, // reward per token
-  pub last_updated_time: i128,       // last updated time
+  pub last_updated_time: u64,
 }
 
 pub const STAKING_GLOBALS: Symbol = symbol_short!("globals");
