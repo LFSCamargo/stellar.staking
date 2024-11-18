@@ -1,16 +1,3 @@
-# Rust's output directory
-target
-
-# Local Soroban settings
-.soroban
-
-contracts/**/test_snapshots/*
-
-
-.DS_Store
-
-node_modules/
-
 # Logs
 logs
 *.log
