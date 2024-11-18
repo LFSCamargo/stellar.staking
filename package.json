@@ -1,0 +1,15 @@
+{
+  "name": "stellar.staking",
+  "version": "1.0.0",
+  "description": "Simple Liquid Staking Application built with Rust, Soroban and React",
+  "author": "LFSCamargo",
+  "license": "ISC",
+  "scripts": {
+    "web:dev": "pnpm run --filter web dev",
+    "web:build": "pnpm run --filter web build",
+    "web:preview": "pnpm run --filter web preview",
+    "web:test": "pnpm run --filter web test",
+    "web:test:ui": "pnpm run --filter web test:ui",
+    "web:test:coverage": "pnpm run --filter web test:coverage"
+  }
+}
