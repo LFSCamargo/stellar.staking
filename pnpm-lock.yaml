@@ -8,7 +8,7 @@ importers:
 
   .: {}
 
-  apps/little-react:
+  apps/web:
     dependencies:
       '@tanstack/react-query':
         specifier: ^5.60.5
